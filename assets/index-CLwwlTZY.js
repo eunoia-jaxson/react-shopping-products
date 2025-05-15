@@ -8811,7 +8811,7 @@ const Header = () => {
   const { cartItems } = useShoppingCartContext();
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { className: HeaderStyles, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("a", { href: "/", className: LogoStyles, children: "SHOP" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/shopIcon.svg", alt: "장바구니", className: IconStyles }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "./shopIcon.svg", alt: "장바구니", className: IconStyles }),
     cartItems.length !== 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: ShoppingCartCount, children: cartItems.length })
   ] });
 };
@@ -8874,7 +8874,7 @@ const ButtonStyles = css`
 `;
 const RemoveButton = ({ onClick }) => {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { className: RemoveButtonStyles, onClick, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/removeShoppingCart.svg" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "./removeShoppingCart.svg" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: RemoveButtonTextStyles, children: "빼기" })
   ] });
 };
@@ -8887,7 +8887,7 @@ const RemoveButtonTextStyles = css`
 `;
 const AddButton = ({ onClick }) => {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { className: AddButtonStyles, onClick, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "/addShoppingCart.svg" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "./addShoppingCart.svg" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: AddButtonTextStyles, children: "담기" })
   ] });
 };
