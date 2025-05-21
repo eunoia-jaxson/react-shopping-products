@@ -8709,94 +8709,120 @@ var _createEmotion = createEmotion({
   key: "css"
 }), keyframes = _createEmotion.keyframes, css = _createEmotion.css;
 const INITIAL_ERROR = {
-  isError: false,
-  errorMessage: ""
+  is: false,
+  message: ""
 };
-async function getShoppingCart({
-  endpoint
+async function apiRequestWithAuth({
+  endpoint,
+  method = "GET",
+  body
 }) {
   const username = "eunoia-jaxson";
   const password = "password";
   const baseUrl = "http://techcourse-lv2-alb-974870821.ap-northeast-2.elb.amazonaws.com";
   const credentials = btoa(`${username}:${password}`);
-  try {
-    const response = await fetch(`${baseUrl}${endpoint}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Basic ${credentials}`
-      }
-    });
-    if (!response.ok) {
-      throw new Error("Network response was not ok");
-    }
-    const data = await response.json();
-    return data.content;
-  } catch (error) {
-    throw new Error("Error fetching products:" + error);
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Basic ${credentials}`
+  };
+  const options = {
+    method,
+    headers
+  };
+  if (body && method !== "GET") {
+    options.body = JSON.stringify(body);
   }
+  const response = await fetch(`${baseUrl}${endpoint}`, options);
+  if (!response.ok) {
+    throw new Error(`Network response was not ok: ${response.statusText}`);
+  }
+  if (response.status === 200) {
+    const data = await response.json();
+    return data;
+  }
+  return null;
+}
+const PARAMS = new URLSearchParams({ page: "0", size: "50" }).toString();
+async function getShoppingCart(endpoint) {
+  const response = await apiRequestWithAuth({
+    endpoint: `${endpoint}?${PARAMS}`
+  });
+  return response.content;
+}
+async function addShoppingCart(request) {
+  await apiRequestWithAuth({
+    endpoint: request.endpoint,
+    method: "POST",
+    body: request.requestBody
+  });
+  return await getShoppingCart(request.endpoint);
+}
+async function deleteShoppingCart(request) {
+  await apiRequestWithAuth({
+    endpoint: `${request.endpoint}/${request.cartItemId}`,
+    method: "DELETE"
+  });
+  return await getShoppingCart(request.endpoint);
 }
 function useGetShoppingCart() {
   const [data, setData] = reactExports.useState([]);
-  const [error, setError] = reactExports.useState(INITIAL_ERROR);
-  const [isLoading, setIsLoading] = reactExports.useState(false);
-  const handleGet = reactExports.useCallback(async () => {
-    setIsLoading(true);
+  const [shoppingCartError, setShoppingCartError] = reactExports.useState(INITIAL_ERROR);
+  const [isShoppingCartLoading, setIsShoppingCartLoading] = reactExports.useState(false);
+  const handleGet = async () => {
+    setIsShoppingCartLoading(true);
     try {
       const endpoint = "/cart-items";
-      const newCartItems = await getShoppingCart({ endpoint });
+      const newCartItems = await getShoppingCart(endpoint);
       setData(newCartItems);
     } catch {
-      setError({
-        isError: true,
-        errorMessage: "장바구니를 가져오는 데 실패했습니다. 다시 시도해주세요."
+      setShoppingCartError({
+        is: true,
+        message: "장바구니를 가져오는 데 실패했습니다. 다시 시도해주세요."
       });
     } finally {
-      setIsLoading(false);
+      setIsShoppingCartLoading(false);
     }
-  }, []);
+  };
   reactExports.useEffect(() => {
     handleGet();
-  }, [handleGet]);
-  return { data, error, isLoading };
+  }, []);
+  return { data, shoppingCartError, isShoppingCartLoading };
 }
 const ShoppingCartContext = reactExports.createContext(null);
 const ShoppingCartProvider = ({ children }) => {
-  const { data, error, isLoading } = useGetShoppingCart();
-  const [cartItems, setCartItems] = reactExports.useState([]);
-  const [shoppingCartError, setShoppingCartError] = reactExports.useState(INITIAL_ERROR);
-  const [isShoppingLoading, setIsShoppingLoading] = reactExports.useState(false);
-  const handleCartItemChange = (newCartItems) => {
-    setCartItems(newCartItems);
-  };
-  const handleShoppingCartError = (error2) => {
-    setShoppingCartError(error2);
+  const { data, shoppingCartError, isShoppingCartLoading } = useGetShoppingCart();
+  const [items, setItems] = reactExports.useState([]);
+  const [error, setError] = reactExports.useState(INITIAL_ERROR);
+  const [isLoading, setIsLoading] = reactExports.useState(false);
+  const updateItems = reactExports.useCallback((newCartItems) => {
+    setItems(newCartItems);
+  }, []);
+  const updateError = reactExports.useCallback((error2) => {
+    setError(error2);
     setTimeout(() => {
-      setShoppingCartError(INITIAL_ERROR);
+      setError(INITIAL_ERROR);
     }, 3e3);
-  };
-  const handleIsShoppingLoading = (value) => {
-    setIsShoppingLoading(value);
-  };
+  }, []);
+  const updateIsLoading = reactExports.useCallback((value2) => {
+    setIsLoading(value2);
+  }, []);
   reactExports.useEffect(() => {
-    setCartItems(data);
-    setShoppingCartError(error);
-    setIsShoppingLoading(isLoading);
-  }, [data, error, isLoading]);
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(
-    ShoppingCartContext.Provider,
-    {
-      value: {
-        cartItems,
-        shoppingCartError,
-        handleCartItemChange,
-        handleShoppingCartError,
-        handleIsShoppingLoading,
-        isShoppingLoading
-      },
-      children
-    }
+    setItems(data);
+    setError(shoppingCartError);
+    setIsLoading(isShoppingCartLoading);
+  }, [data, shoppingCartError, isShoppingCartLoading]);
+  const value = reactExports.useMemo(
+    () => ({
+      items,
+      error,
+      updateItems,
+      updateError,
+      updateIsLoading,
+      isLoading
+    }),
+    [items, error, updateItems, updateError, updateIsLoading, isLoading]
   );
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(ShoppingCartContext.Provider, { value, children });
 };
 const useShoppingCartContext = () => {
   const context = reactExports.useContext(ShoppingCartContext);
@@ -8808,11 +8834,11 @@ const useShoppingCartContext = () => {
   return context;
 };
 const Header = () => {
-  const { cartItems } = useShoppingCartContext();
+  const shoppingCart = useShoppingCartContext();
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { className: HeaderStyles, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("a", { href: "/", className: LogoStyles, children: "SHOP" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "./shopIcon.svg", alt: "장바구니", className: IconStyles }),
-    cartItems.length !== 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: ShoppingCartCount, children: cartItems.length })
+    shoppingCart.items.length !== 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: ShoppingCartCount, children: shoppingCart.items.length })
   ] });
 };
 const HeaderStyles = css`
@@ -8853,8 +8879,8 @@ const ShoppingCartCount = css`
   font-size: 12px;
   font-weight: 800;
 `;
-const ErrorToast = ({ errorMessage }) => {
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: ErrorToastStyles, children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: errorMessage }) });
+const ErrorToast = ({ message }) => {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: ErrorToastStyles, children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: message }) });
 };
 const ErrorToastStyles = css`
   width: 430px;
@@ -8898,155 +8924,78 @@ const AddButtonStyles = css`
 const AddButtonTextStyles = css`
   color: white;
 `;
-async function addShoppingCart({
-  endpoint,
-  requestBody
-}) {
-  const username = "eunoia-jaxson";
-  const password = "password";
-  const baseUrl = "http://techcourse-lv2-alb-974870821.ap-northeast-2.elb.amazonaws.com";
-  const credentials = btoa(`${username}:${password}`);
-  try {
-    const response = await fetch(`${baseUrl}${endpoint}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Basic ${credentials}`
-      },
-      body: JSON.stringify(requestBody)
-    });
-    if (!response.ok) {
-      throw new Error("Network response was not ok");
-    }
-    const params = {
-      page: "0",
-      size: "50"
-    };
-    const query = new URLSearchParams(params).toString();
-    const responseDate = await getShoppingCart({
-      endpoint: `${endpoint}?${query}`
-    });
-    return responseDate;
-  } catch (error) {
-    throw new Error("Error fetching products:" + error);
-  }
-}
 function useAddShoppingCart(productId) {
-  const {
-    cartItems,
-    handleCartItemChange,
-    handleShoppingCartError,
-    handleIsShoppingLoading
-  } = useShoppingCartContext();
-  const handleAdd = reactExports.useCallback(async () => {
-    if (cartItems.length >= 50) {
-      handleShoppingCartError({
-        isError: true,
-        errorMessage: "장바구니 최대 50개까지 담을 수 있습니다."
+  const shoppingCart = useShoppingCartContext();
+  return async () => {
+    if (shoppingCart.items.length >= 50) {
+      shoppingCart.updateError({
+        is: true,
+        message: "장바구니 최대 50개까지 담을 수 있습니다."
       });
       return;
     }
-    handleIsShoppingLoading(true);
+    shoppingCart.updateIsLoading(true);
     try {
       const endpoint = "/cart-items";
       const requestBody = { productId, quantity: 1 };
       const newCartItems = await addShoppingCart({ endpoint, requestBody });
-      handleCartItemChange(newCartItems);
+      shoppingCart.updateItems(newCartItems);
     } catch {
-      handleShoppingCartError({
-        isError: true,
-        errorMessage: "상품을 장바구니에 추가하지 못했습니다."
+      shoppingCart.updateError({
+        is: true,
+        message: "상품을 장바구니에 추가하지 못했습니다."
       });
     } finally {
-      handleIsShoppingLoading(false);
+      shoppingCart.updateIsLoading(false);
     }
-  }, [
-    productId,
-    cartItems.length,
-    handleCartItemChange,
-    handleShoppingCartError,
-    handleIsShoppingLoading
-  ]);
-  return { handleAdd };
-}
-async function deleteShoppingCart({
-  endpoint,
-  cartItemId
-}) {
-  const username = "eunoia-jaxson";
-  const password = "password";
-  const baseUrl = "http://techcourse-lv2-alb-974870821.ap-northeast-2.elb.amazonaws.com";
-  const credentials = btoa(`${username}:${password}`);
-  try {
-    const response = await fetch(`${baseUrl}${endpoint}/${cartItemId}`, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Basic ${credentials}`
-      }
-    });
-    if (!response.ok) {
-      throw new Error("Network response was not ok");
-    }
-    const params = {
-      page: "0",
-      size: "50"
-    };
-    const query = new URLSearchParams(params).toString();
-    const responseDate = await getShoppingCart({
-      endpoint: `${endpoint}?${query}`
-    });
-    return responseDate;
-  } catch (error) {
-    throw new Error("Error fetching products:" + error);
-  }
+  };
 }
 function useDeleteShoppingCart(cartItemId) {
-  const {
-    handleCartItemChange,
-    handleShoppingCartError,
-    handleIsShoppingLoading
-  } = useShoppingCartContext();
-  const handleDelete = reactExports.useCallback(async () => {
-    handleIsShoppingLoading(true);
+  const shoppingCart = useShoppingCartContext();
+  return async () => {
+    shoppingCart.updateIsLoading(true);
     try {
       const endpoint = "/cart-items";
       const newCartItems = await deleteShoppingCart({ endpoint, cartItemId });
-      handleCartItemChange(newCartItems);
+      shoppingCart.updateItems(newCartItems);
     } catch {
-      handleShoppingCartError({
-        isError: true,
-        errorMessage: "상품을 장바구니에서 삭제하지 못했습니다."
+      shoppingCart.updateError({
+        is: true,
+        message: "상품을 장바구니에서 삭제하지 못했습니다."
       });
     } finally {
-      handleIsShoppingLoading(false);
+      shoppingCart.updateIsLoading(false);
     }
-  }, [
-    cartItemId,
-    handleCartItemChange,
-    handleShoppingCartError,
-    handleIsShoppingLoading
-  ]);
-  return { handleDelete };
+  };
 }
 const ProductCard = ({ product, isInCart }) => {
   var _a;
   const { id: id2, name, price, imageUrl } = product;
-  const { cartItems } = useShoppingCartContext();
-  const cartItemId = (_a = cartItems.find(
+  const shoppingCart = useShoppingCartContext();
+  const cartItemId = (_a = shoppingCart.items.find(
     (item) => item.product.id === product.id
   )) == null ? void 0 : _a.id;
-  const { handleAdd } = useAddShoppingCart(product.id);
-  const { handleDelete } = useDeleteShoppingCart(cartItemId);
+  const addShoppingCart2 = useAddShoppingCart(product.id);
+  const deleteShoppingCart2 = useDeleteShoppingCart(cartItemId);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: CardFrame, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: ImageFrame, children: /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: imageUrl, alt: name, className: CardImage }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: ImageFrame, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "img",
+      {
+        src: imageUrl || "./default.png",
+        alt: name,
+        className: CardImage,
+        onError: (e) => {
+          e.currentTarget.src = "./default.png";
+        }
+      }
+    ) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: CardInfo, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: ProductName, children: name }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
         price.toLocaleString(),
         "원"
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: ButtonArea, children: isInCart ? /* @__PURE__ */ jsxRuntimeExports.jsx(RemoveButton, { onClick: handleDelete }) : /* @__PURE__ */ jsxRuntimeExports.jsx(AddButton, { onClick: handleAdd }) })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: ButtonArea, children: isInCart ? /* @__PURE__ */ jsxRuntimeExports.jsx(RemoveButton, { onClick: deleteShoppingCart2 }) : /* @__PURE__ */ jsxRuntimeExports.jsx(AddButton, { onClick: addShoppingCart2 }) })
     ] })
   ] }, id2);
 };
@@ -9085,9 +9034,9 @@ const ButtonArea = css`
   justify-content: flex-end;
 `;
 const ProductCardList = ({ products }) => {
-  const { cartItems } = useShoppingCartContext();
+  const shoppingCart = useShoppingCartContext();
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: ProductCardListStyles, children: products.map((product) => {
-    const isInCart = cartItems.some(
+    const isInCart = shoppingCart.items.some(
       (item) => item.product.id === product.id
     );
     return /* @__PURE__ */ jsxRuntimeExports.jsx(ProductCard, { product, isInCart }, product.id);
@@ -9148,7 +9097,7 @@ async function fetchProducts({
   }
 }
 function useProductsFetch(sort, category) {
-  const [products, setProducts] = reactExports.useState([]);
+  const [items, setItems] = reactExports.useState([]);
   const [isLoading, setIsLoading] = reactExports.useState(false);
   const [error, setError] = reactExports.useState(INITIAL_ERROR);
   reactExports.useEffect(() => {
@@ -9159,12 +9108,12 @@ function useProductsFetch(sort, category) {
       setIsLoading(true);
       try {
         const { content } = await fetchProducts({ endpoint });
-        setProducts(content);
+        setItems(content);
         setError(INITIAL_ERROR);
       } catch {
         setError({
-          isError: true,
-          errorMessage: "상품을 불러오는 데 실패했습니다."
+          is: true,
+          message: "상품을 불러오는 데 실패했습니다."
         });
         setTimeout(() => setError(INITIAL_ERROR), 3e3);
       } finally {
@@ -9172,41 +9121,52 @@ function useProductsFetch(sort, category) {
       }
     })();
   }, [sort, category]);
-  return { products, isLoading, error, setProducts };
+  return { items, isLoading, error, setItems };
 }
-const CATEGORY = Object.freeze(["전체", "패션잡화", "식료품"]);
-const SORT_OPTION = Object.freeze(["낮은 가격순", "높은 가격순"]);
+const CATEGORY = ["전체", "패션잡화", "식료품"];
+const SORT_OPTION = ["낮은 가격순", "높은 가격순"];
 const ProductsContext = reactExports.createContext(null);
 const ProductsProvider = ({ children }) => {
   const [sort, setSort] = reactExports.useState(SORT_OPTION[0]);
   const [category, setCategory] = reactExports.useState(CATEGORY[0]);
-  const handleChangeSort = (newSort) => setSort(newSort);
-  const handleChangeCategory = (newCategory) => setCategory(newCategory);
+  const updateSort = reactExports.useCallback((newSort) => {
+    setSort(newSort);
+  }, []);
+  const updateCategory = reactExports.useCallback((newCategory) => {
+    setCategory(newCategory);
+  }, []);
   const {
-    products,
-    isLoading: isProductsLoading,
-    error: productsError,
-    setProducts: handleChangeProducts
+    items,
+    isLoading,
+    error,
+    setItems: updateItems
   } = useProductsFetch(
     sort === SORT_OPTION[0] ? "price,asc" : "price,desc",
     category
   );
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(
-    ProductsContext.Provider,
-    {
-      value: {
-        products,
-        productsError,
-        handleChangeProducts,
-        handleChangeSort,
-        handleChangeCategory,
-        category,
-        sort,
-        isProductsLoading
-      },
-      children
-    }
+  const value = reactExports.useMemo(
+    () => ({
+      items,
+      error,
+      updateItems,
+      updateSort,
+      updateCategory,
+      category,
+      sort,
+      isLoading
+    }),
+    [
+      items,
+      error,
+      updateItems,
+      updateSort,
+      updateCategory,
+      category,
+      sort,
+      isLoading
+    ]
   );
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(ProductsContext.Provider, { value, children });
 };
 const useProductsContext = () => {
   const context = reactExports.useContext(ProductsContext);
@@ -9217,21 +9177,21 @@ const useProductsContext = () => {
   }
   return context;
 };
+const isCategory = (value) => CATEGORY.includes(value);
+const isSortOption = (value) => SORT_OPTION.includes(value);
 const ProductListToolBar = () => {
-  const { handleChangeSort, handleChangeCategory } = useProductsContext();
-  const isCategoryOption = (value) => {
-    return CATEGORY.includes(value);
+  const products = useProductsContext();
+  const handleFilterChange = (e) => {
+    const value = e.target.value;
+    if (isCategory(value)) {
+      products.updateCategory(value);
+    }
   };
-  const isSortOption = (value) => {
-    return SORT_OPTION.includes(value);
-  };
-  const handleFilterChange = async (e) => {
-    if (isCategoryOption(e.target.value))
-      handleChangeCategory(e.target.value);
-  };
-  const handleSortingChange = async (e) => {
-    if (isSortOption(e.target.value))
-      handleChangeSort(e.target.value);
+  const handleSortingChange = (e) => {
+    const value = e.target.value;
+    if (isSortOption(value)) {
+      products.updateSort(value);
+    }
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: ToolBarSectionStyles, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { children: "bpple 상품 목록" }),
@@ -9327,13 +9287,13 @@ const satellite2Style = css`
   left: -10%;
 `;
 const ProductListPage = () => {
-  const { products, productsError, isProductsLoading } = useProductsContext();
-  const { shoppingCartError } = useShoppingCartContext();
+  const products = useProductsContext();
+  const shoppingCart = useShoppingCartContext();
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-    productsError.isError && /* @__PURE__ */ jsxRuntimeExports.jsx(ErrorToast, { errorMessage: productsError.errorMessage }),
-    shoppingCartError.isError && /* @__PURE__ */ jsxRuntimeExports.jsx(ErrorToast, { errorMessage: shoppingCartError.errorMessage }),
+    products.error.is && /* @__PURE__ */ jsxRuntimeExports.jsx(ErrorToast, { message: products.error.message }),
+    shoppingCart.error.is && /* @__PURE__ */ jsxRuntimeExports.jsx(ErrorToast, { message: shoppingCart.error.message }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(ProductListToolBar, {}),
-    isProductsLoading ? /* @__PURE__ */ jsxRuntimeExports.jsx(OrbitSpinner, {}) : /* @__PURE__ */ jsxRuntimeExports.jsx(ProductCardList, { products })
+    products.isLoading ? /* @__PURE__ */ jsxRuntimeExports.jsx(OrbitSpinner, {}) : /* @__PURE__ */ jsxRuntimeExports.jsx(ProductCardList, { products: products.items })
   ] });
 };
 function App() {
