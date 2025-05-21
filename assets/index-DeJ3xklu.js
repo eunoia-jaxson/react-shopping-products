@@ -9123,8 +9123,8 @@ function useProductsFetch(sort, category) {
   }, [sort, category]);
   return { items, isLoading, error, setItems };
 }
-const CATEGORY = ["전체", "패션잡화", "식료품"];
-const SORT_OPTION = ["낮은 가격순", "높은 가격순"];
+const CATEGORY = Object.freeze(["전체", "패션잡화", "식료품"]);
+const SORT_OPTION = Object.freeze(["낮은 가격순", "높은 가격순"]);
 const ProductsContext = reactExports.createContext(null);
 const ProductsProvider = ({ children }) => {
   const [sort, setSort] = reactExports.useState(SORT_OPTION[0]);
