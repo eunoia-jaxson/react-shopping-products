@@ -8903,22 +8903,29 @@ const DataProvider = ({ children }) => {
   const setSort = reactExports.useCallback((sort) => {
     dispatch({ type: "SET_SORT", key: "products", sort });
   }, []);
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(
-    DataContext.Provider,
-    {
-      value: {
-        state,
-        setData,
-        setLoading,
-        setError,
-        clearError,
-        initApi,
-        setCategory,
-        setSort
-      },
-      children
-    }
+  const value = reactExports.useMemo(
+    () => ({
+      state,
+      setData,
+      setLoading,
+      setError,
+      clearError,
+      initApi,
+      setCategory,
+      setSort
+    }),
+    [
+      state,
+      setData,
+      setLoading,
+      setError,
+      clearError,
+      initApi,
+      setCategory,
+      setSort
+    ]
   );
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(DataContext.Provider, { value, children });
 };
 const useDataContext = () => {
   const context = reactExports.useContext(DataContext);
@@ -8956,7 +8963,9 @@ const useData = ({
     data: currentState.data,
     loading: currentState.loading,
     error: currentState.error,
-    refetch: fetchData
+    refetch: fetchData,
+    setLoading,
+    setError
   };
 };
 const username = "eunoia-jaxson";
@@ -9022,12 +9031,11 @@ async function updateShoppingCart(request) {
 }
 const PARAMS = new URLSearchParams({ page: "0", size: "50" }).toString();
 const useShoppingCart = () => {
-  const { data, loading, error, refetch } = useData({
+  const { data, loading, error, refetch, setLoading, setError } = useData({
     key: "cart-items",
     endpoint: `/cart-items?${PARAMS}`,
     fetchFunction: getShoppingCart
   });
-  const { setError, setLoading } = useDataContext();
   const add = reactExports.useCallback(
     async (productId) => {
       setLoading("cart-items", true);
