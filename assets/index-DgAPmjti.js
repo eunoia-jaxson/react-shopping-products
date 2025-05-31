@@ -8784,7 +8784,7 @@ const QuantitySpinner = ({
         children: "-"
       }
     ),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: quantity }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "data-testid": "cart-item-quantity", children: quantity }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: QuantitySpinnerButtonStyles, onClick: handleIncrease, children: "+" })
   ] });
 };
@@ -8825,292 +8825,15 @@ const AddButtonStyles = css`
 const AddButtonTextStyles = css`
   color: white;
 `;
-const INITIAL_STATE = {
-  data: null,
-  loading: false,
-  error: null,
-  category: "",
-  sort: ""
-};
-const dataReducer = (state, action) => {
-  const prev2 = state[action.key] ?? INITIAL_STATE;
-  switch (action.type) {
-    case "INIT_API":
-      return { ...state, [action.key]: { ...INITIAL_STATE } };
-    case "SET_CATEGORY":
-      return {
-        ...state,
-        products: { ...prev2, category: action.category }
-      };
-    case "SET_SORT":
-      return {
-        ...state,
-        products: { ...prev2, sort: action.sort }
-      };
-    case "SET_DATA":
-      return {
-        ...state,
-        [action.key]: {
-          ...prev2,
-          data: action.data,
-          loading: false,
-          error: null
-        }
-      };
-    case "SET_LOADING":
-      return {
-        ...state,
-        [action.key]: { ...prev2, loading: action.loading }
-      };
-    case "SET_ERROR":
-      return {
-        ...state,
-        [action.key]: { ...prev2, error: action.error, loading: false }
-      };
-    case "CLEAR_ERROR":
-      return {
-        ...state,
-        [action.key]: { ...prev2, error: null }
-      };
-    default:
-      return state;
-  }
-};
-const DataContext = reactExports.createContext(null);
-const DataProvider = ({ children }) => {
-  const [state, dispatch] = reactExports.useReducer(dataReducer, {});
-  const setData = reactExports.useCallback(
-    (key, data) => {
-      dispatch({ type: "SET_DATA", key, data });
-    },
-    []
-  );
-  const setLoading = reactExports.useCallback((key, loading) => {
-    dispatch({ type: "SET_LOADING", key, loading });
-  }, []);
-  const setError = reactExports.useCallback((key, error) => {
-    dispatch({ type: "SET_ERROR", key, error });
-  }, []);
-  const clearError = reactExports.useCallback((key) => {
-    dispatch({ type: "CLEAR_ERROR", key });
-  }, []);
-  const initApi = reactExports.useCallback((key) => {
-    dispatch({ type: "INIT_API", key });
-  }, []);
-  const setCategory = reactExports.useCallback((category) => {
-    dispatch({ type: "SET_CATEGORY", key: "products", category });
-  }, []);
-  const setSort = reactExports.useCallback((sort) => {
-    dispatch({ type: "SET_SORT", key: "products", sort });
-  }, []);
-  const value = reactExports.useMemo(
-    () => ({
-      state,
-      setData,
-      setLoading,
-      setError,
-      clearError,
-      initApi,
-      setCategory,
-      setSort
-    }),
-    [
-      state,
-      setData,
-      setLoading,
-      setError,
-      clearError,
-      initApi,
-      setCategory,
-      setSort
-    ]
-  );
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(DataContext.Provider, { value, children });
-};
-const useDataContext = () => {
-  const context = reactExports.useContext(DataContext);
-  if (!context) {
-    throw new Error("useDataContext must be used within DataProvider");
-  }
-  return context;
-};
-const useData = ({
-  key,
-  endpoint,
-  fetchFunction
+const ProductCard = ({
+  product,
+  cartItem,
+  create,
+  remove,
+  update
 }) => {
-  const { state, setData, setLoading, setError } = useDataContext();
-  const fetchData = reactExports.useCallback(async () => {
-    setLoading(key, true);
-    setError(key, null);
-    try {
-      const data = await fetchFunction(endpoint);
-      setData(key, data);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      setError(key, errorMessage);
-    }
-  }, [key, endpoint, setData, setLoading, setError, fetchFunction]);
-  reactExports.useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-  const currentState = state[key] || {
-    data: null,
-    loading: false,
-    error: null
-  };
-  return {
-    data: currentState.data,
-    loading: currentState.loading,
-    error: currentState.error,
-    refetch: fetchData,
-    setLoading,
-    setError
-  };
-};
-const username = "eunoia-jaxson";
-const password = "password";
-const baseUrl$1 = "http://techcourse-lv2-alb-974870821.ap-northeast-2.elb.amazonaws.com";
-const credentials = btoa(`${username}:${password}`);
-const headers = {
-  "Content-Type": "application/json",
-  Authorization: `Basic ${credentials}`
-};
-async function apiRequestWithAuth({
-  endpoint,
-  method = "GET",
-  body
-}) {
-  const options = {
-    method,
-    headers
-  };
-  if (body && method !== "GET") {
-    options.body = JSON.stringify(body);
-  }
-  const response = await fetch(`${baseUrl$1}${endpoint}`, options);
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error("상품을 찾을 수 없습니다.");
-    }
-    if (response.status === 400) {
-      throw new Error("재고 수량을 초과하여 담을 수 없습니다.");
-    }
-  }
-  const contentType = response.headers.get("content-type");
-  if (contentType !== "application/json")
-    return {};
-  const data = await response.json();
-  return data.content;
-}
-async function getShoppingCart(endpoint) {
-  const response = await apiRequestWithAuth({
-    endpoint: `${endpoint}`
-  });
-  return response;
-}
-async function addShoppingCart(request) {
-  await apiRequestWithAuth({
-    endpoint: request.endpoint,
-    method: "POST",
-    body: request.requestBody
-  });
-}
-async function deleteShoppingCart(request) {
-  await apiRequestWithAuth({
-    endpoint: `${request.endpoint}/${request.cartItemId}`,
-    method: "DELETE"
-  });
-}
-async function updateShoppingCart(request) {
-  await apiRequestWithAuth({
-    endpoint: `${request.endpoint}`,
-    method: "PATCH",
-    body: request.requestBody
-  });
-}
-const PARAMS = new URLSearchParams({ page: "0", size: "50" }).toString();
-const useShoppingCart = () => {
-  const { data, loading, error, refetch, setLoading, setError } = useData({
-    key: "cart-items",
-    endpoint: `/cart-items?${PARAMS}`,
-    fetchFunction: getShoppingCart
-  });
-  const add = reactExports.useCallback(
-    async (productId) => {
-      setLoading("cart-items", true);
-      try {
-        await addShoppingCart({
-          endpoint: "/cart-items",
-          requestBody: { productId, quantity: 1 }
-        });
-        await refetch();
-      } catch (error2) {
-        const message = error2 instanceof Error ? error2.message : "장바구니 추가 중 알 수 없는 오류가 발생했습니다.";
-        setError("cart-items", message);
-        setTimeout(() => {
-          setError("cart-items", null);
-        }, 3e3);
-      } finally {
-        setLoading("cart-items", false);
-      }
-    },
-    [refetch, setError, setLoading]
-  );
-  const remove = reactExports.useCallback(
-    async (cartItemId) => {
-      if (cartItemId == null)
-        return;
-      setLoading("cart-items", true);
-      try {
-        await deleteShoppingCart({
-          endpoint: "/cart-items",
-          cartItemId
-        });
-        await refetch();
-      } catch (error2) {
-        const message = error2 instanceof Error ? error2.message : "장바구니 삭제 중 알 수 없는 오류가 발생했습니다.";
-        setError("cart-items", message);
-        setTimeout(() => {
-          setError("cart-items", null);
-        }, 3e3);
-      } finally {
-        setLoading("cart-items", false);
-      }
-    },
-    [refetch, setError, setLoading]
-  );
-  const update = reactExports.useCallback(
-    async (cartItemId, quantity) => {
-      setLoading("cart-items", true);
-      try {
-        await updateShoppingCart({
-          endpoint: `/cart-items/${cartItemId}`,
-          requestBody: { quantity }
-        });
-        await refetch();
-      } catch (error2) {
-        const message = error2 instanceof Error ? error2.message : "장바구니 수량 수정 중 알 수 없는 오류가 발생했습니다.";
-        setError("cart-items", message);
-        setTimeout(() => {
-          setError("cart-items", null);
-        }, 3e3);
-      } finally {
-        setLoading("cart-items", false);
-      }
-    },
-    [refetch, setError, setLoading]
-  );
-  return { data, loading, error, add, remove, update };
-};
-const ProductCard = ({ product }) => {
   const { id: id2, name, price, imageUrl, quantity } = product;
-  const { data, add, remove, update } = useShoppingCart();
-  const [cartItem, setCartItem] = reactExports.useState(null);
-  reactExports.useEffect(() => {
-    setCartItem((data == null ? void 0 : data.find((ci2) => ci2.product.id === id2)) ?? null);
-  }, [data, id2]);
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: CardFrame, children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: CardFrame, "data-testid": "product-card", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: ImageFrame, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "img",
@@ -9126,8 +8849,8 @@ const ProductCard = ({ product }) => {
       (quantity === 0 || cartItem && cartItem.quantity === quantity) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: SoldOut, children: "품절" })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: CardInfo, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: ProductName, children: name }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: ProductName, "data-testid": "product-name", children: name }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { "data-testid": "product-price", children: [
         price.toLocaleString(),
         "원"
       ] }),
@@ -9139,7 +8862,7 @@ const ProductCard = ({ product }) => {
           handleIncrease: () => update(cartItem.id, cartItem.quantity + 1),
           handleDecrease: () => update(cartItem.id, cartItem.quantity - 1)
         }
-      ) : /* @__PURE__ */ jsxRuntimeExports.jsx(AddButton, { onClick: () => add(id2) }) })
+      ) : /* @__PURE__ */ jsxRuntimeExports.jsx(AddButton, { onClick: () => create(id2) }) })
     ] })
   ] }, id2);
 };
@@ -9192,8 +8915,18 @@ const SoldOut = css`
   justify-content: center;
   align-items: center;
 `;
-const ProductCardList = ({ products }) => {
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: ProductCardListStyles, children: products && products.map((product) => /* @__PURE__ */ jsxRuntimeExports.jsx(ProductCard, { product }, product.id)) });
+const ProductCardList = ({ products, shoppingCart }) => {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: ProductCardListStyles, "data-testid": "product-list", children: products && products.map((product) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+    ProductCard,
+    {
+      product,
+      cartItem: shoppingCart.data.find((ci2) => ci2.product.id === product.id) ?? null,
+      create: shoppingCart.create,
+      remove: shoppingCart.remove,
+      update: shoppingCart.update
+    },
+    product.id
+  )) });
 };
 const ProductCardListStyles = css`
   padding: 0 24px 24px;
@@ -9236,6 +8969,103 @@ const SortingDropDown = ({ options, handleChange }) => {
 };
 const CATEGORY = Object.freeze(["전체", "패션잡화", "식료품"]);
 const SORT_OPTION = Object.freeze(["낮은 가격순", "높은 가격순"]);
+const dataReducer = (state, action) => {
+  const prev2 = state[action.key];
+  switch (action.type) {
+    case "SET_CATEGORY":
+      return {
+        ...state,
+        products: { ...prev2, category: action.category }
+      };
+    case "SET_SORT":
+      return {
+        ...state,
+        products: { ...prev2, sort: action.sort }
+      };
+    case "SET_DATA":
+      return {
+        ...state,
+        [action.key]: {
+          ...prev2,
+          data: action.data,
+          loading: false,
+          error: ""
+        }
+      };
+    case "SET_LOADING":
+      return {
+        ...state,
+        [action.key]: { ...prev2, loading: action.loading }
+      };
+    case "SET_ERROR":
+      return {
+        ...state,
+        [action.key]: { ...prev2, error: action.error, loading: false }
+      };
+    case "CLEAR_ERROR":
+      return {
+        ...state,
+        [action.key]: { ...prev2, error: "" }
+      };
+    default:
+      return state;
+  }
+};
+const DataContext = reactExports.createContext(null);
+const DataProvider = ({ children }) => {
+  const [state, dispatch] = reactExports.useReducer(dataReducer, {
+    products: {
+      data: [],
+      loading: false,
+      error: "",
+      category: "전체",
+      sort: "price,asc"
+    },
+    "cart-items": {
+      data: [],
+      loading: false,
+      error: ""
+    }
+  });
+  const setData = reactExports.useCallback((key, data) => {
+    dispatch({ type: "SET_DATA", key, data });
+  }, []);
+  const setLoading = reactExports.useCallback((key, loading) => {
+    dispatch({ type: "SET_LOADING", key, loading });
+  }, []);
+  const setError = reactExports.useCallback((key, error) => {
+    dispatch({ type: "SET_ERROR", key, error });
+  }, []);
+  const clearError = reactExports.useCallback((key) => {
+    dispatch({ type: "CLEAR_ERROR", key });
+  }, []);
+  const setCategory = reactExports.useCallback((category) => {
+    dispatch({ type: "SET_CATEGORY", key: "products", category });
+  }, []);
+  const setSort = reactExports.useCallback((sort) => {
+    dispatch({ type: "SET_SORT", key: "products", sort });
+  }, []);
+  const value = reactExports.useMemo(
+    () => ({
+      state,
+      setData,
+      setLoading,
+      setError,
+      clearError,
+      setCategory,
+      setSort
+    }),
+    [state, setData, setLoading, setError, clearError, setCategory, setSort]
+  );
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(DataContext.Provider, { value, children });
+};
+const useDataContext = () => {
+  const context = reactExports.useContext(DataContext);
+  if (!context) {
+    throw new Error("useDataContext must be used within DataProvider");
+  }
+  return context;
+};
 const ProductListToolBar = () => {
   const { setCategory, setSort } = useDataContext();
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: ToolBarSectionStyles, children: [
@@ -9339,10 +9169,44 @@ const satellite2Style = css`
   bottom: 25%;
   left: -10%;
 `;
-const baseUrl = "http://techcourse-lv2-alb-974870821.ap-northeast-2.elb.amazonaws.com";
+const useData = ({
+  key,
+  endpoint,
+  fetchFunction
+}) => {
+  const { state, setData, setLoading, setError } = useDataContext();
+  const fetchData = reactExports.useCallback(async () => {
+    setLoading(key, true);
+    setError(key, "");
+    try {
+      const data = await fetchFunction(endpoint);
+      setData(key, data ?? []);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      setError(key, errorMessage);
+    }
+  }, [key, endpoint, setData, setLoading, setError, fetchFunction]);
+  reactExports.useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+  const currentState = state[key] || {
+    data: [],
+    loading: false,
+    error: ""
+  };
+  return {
+    data: currentState.data,
+    loading: currentState.loading,
+    error: currentState.error,
+    setLoading,
+    setError,
+    refetch: fetchData
+  };
+};
+const baseUrl$1 = "http://techcourse-lv2-alb-974870821.ap-northeast-2.elb.amazonaws.com";
 async function fetchProducts(endpoint) {
   try {
-    const response = await fetch(`${baseUrl}${endpoint}`);
+    const response = await fetch(`${baseUrl$1}${endpoint}`);
     if (!response.ok) {
       throw new Error("Network response was not ok");
     }
@@ -9375,10 +9239,18 @@ const useProducts = () => {
 const Header = ({ shoppingCart, handleOpen }) => {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { className: HeaderStyles, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("a", { href: "/", className: LogoStyles, children: "SHOP" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { className: buttonStyles, onClick: handleOpen, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "./shopIcon.svg", alt: "장바구니", className: IconStyles }),
-      shoppingCart && shoppingCart.length !== 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: ShoppingCartCount, children: shoppingCart.length })
-    ] })
+    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "button",
+      {
+        className: buttonStyles,
+        onClick: handleOpen,
+        "data-testid": "cart-button",
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "./shopIcon.svg", alt: "장바구니", className: IconStyles }),
+          shoppingCart && shoppingCart.length !== 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: ShoppingCartCount, "data-testid": "cart-badge", children: shoppingCart.length })
+        ]
+      }
+    )
   ] });
 };
 const HeaderStyles = css`
@@ -9423,6 +9295,141 @@ const buttonStyles = css`
   all: unset;
   cursor: pointer;
 `;
+const username = "eunoia-jaxson";
+const password = "password";
+const baseUrl = "http://techcourse-lv2-alb-974870821.ap-northeast-2.elb.amazonaws.com";
+const credentials = btoa(`${username}:${password}`);
+const headers = {
+  "Content-Type": "application/json",
+  Authorization: `Basic ${credentials}`
+};
+async function apiRequestWithAuth({
+  endpoint,
+  method = "GET",
+  body
+}) {
+  const options = {
+    method,
+    headers
+  };
+  if (body && method !== "GET") {
+    options.body = JSON.stringify(body);
+  }
+  const response = await fetch(`${baseUrl}${endpoint}`, options);
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error("상품을 찾을 수 없습니다.");
+    }
+    if (response.status === 400) {
+      throw new Error("재고 수량을 초과하여 담을 수 없습니다.");
+    }
+  }
+  const contentType = response.headers.get("content-type");
+  if (contentType !== "application/json")
+    return {};
+  const data = await response.json();
+  return data.content;
+}
+async function getShoppingCart(endpoint) {
+  const response = await apiRequestWithAuth({
+    endpoint: `${endpoint}`
+  });
+  return response;
+}
+async function addShoppingCart(request) {
+  await apiRequestWithAuth({
+    endpoint: request.endpoint,
+    method: "POST",
+    body: request.requestBody
+  });
+}
+async function deleteShoppingCart(request) {
+  await apiRequestWithAuth({
+    endpoint: `${request.endpoint}/${request.cartItemId}`,
+    method: "DELETE"
+  });
+}
+async function updateShoppingCart(request) {
+  await apiRequestWithAuth({
+    endpoint: `${request.endpoint}`,
+    method: "PATCH",
+    body: request.requestBody
+  });
+}
+const PARAMS = new URLSearchParams({ page: "0", size: "50" }).toString();
+const useShoppingCart = () => {
+  const { data, error, setLoading, setError, refetch } = useData({
+    key: "cart-items",
+    endpoint: `/cart-items?${PARAMS}`,
+    fetchFunction: getShoppingCart
+  });
+  const create = reactExports.useCallback(
+    async (productId) => {
+      setLoading("cart-items", true);
+      try {
+        await addShoppingCart({
+          endpoint: "/cart-items",
+          requestBody: { productId, quantity: 1 }
+        });
+        await refetch();
+      } catch (error2) {
+        const message = error2 instanceof Error ? error2.message : "장바구니 추가 중 알 수 없는 오류가 발생했습니다.";
+        setError("cart-items", message);
+        setTimeout(() => {
+          setError("cart-items", "");
+        }, 3e3);
+      } finally {
+        setLoading("cart-items", false);
+      }
+    },
+    [setError, setLoading, refetch]
+  );
+  const remove = reactExports.useCallback(
+    async (cartItemId) => {
+      if (cartItemId == null)
+        return;
+      setLoading("cart-items", true);
+      try {
+        await deleteShoppingCart({
+          endpoint: "/cart-items",
+          cartItemId
+        });
+        await refetch();
+      } catch (error2) {
+        const message = error2 instanceof Error ? error2.message : "장바구니 삭제 중 알 수 없는 오류가 발생했습니다.";
+        setError("cart-items", message);
+        setTimeout(() => {
+          setError("cart-items", "");
+        }, 3e3);
+      } finally {
+        setLoading("cart-items", false);
+      }
+    },
+    [refetch, setError, setLoading]
+  );
+  const update = reactExports.useCallback(
+    async (cartItemId, quantity) => {
+      setLoading("cart-items", true);
+      try {
+        await updateShoppingCart({
+          endpoint: `/cart-items/${cartItemId}`,
+          requestBody: { quantity }
+        });
+        await refetch();
+      } catch (error2) {
+        const message = error2 instanceof Error ? error2.message : "장바구니 수량 수정 중 알 수 없는 오류가 발생했습니다.";
+        setError("cart-items", message);
+        setTimeout(() => {
+          setError("cart-items", "");
+        }, 3e3);
+      } finally {
+        setLoading("cart-items", false);
+      }
+    },
+    [refetch, setError, setLoading]
+  );
+  return { data, error, create, remove, update };
+};
 const useModal = () => {
   const [isOpen, setIsOpen] = reactExports.useState(false);
   const handleOpen = () => {
@@ -9632,7 +9639,7 @@ const ProductListPage = () => {
     products.error && /* @__PURE__ */ jsxRuntimeExports.jsx(ErrorToast, { message: products.error }),
     shoppingCart.error && /* @__PURE__ */ jsxRuntimeExports.jsx(ErrorToast, { message: shoppingCart.error }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(ProductListToolBar, {}),
-    products.loading ? /* @__PURE__ */ jsxRuntimeExports.jsx(OrbitSpinner, {}) : /* @__PURE__ */ jsxRuntimeExports.jsx(ProductCardList, { products: products.data }),
+    products.loading ? /* @__PURE__ */ jsxRuntimeExports.jsx(OrbitSpinner, {}) : /* @__PURE__ */ jsxRuntimeExports.jsx(ProductCardList, { products: products.data, shoppingCart }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs(ShoppingCartModal, { isOpen, onClose: handleClose, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: ItemListStyles, children: (_a = shoppingCart.data) == null ? void 0 : _a.map((ci2) => /* @__PURE__ */ jsxRuntimeExports.jsx(ShoppingCartItem, { cartItem: ci2 }, ci2.id)) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: TotalPriceStyles, children: [
